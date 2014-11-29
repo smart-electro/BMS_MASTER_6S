@@ -21,7 +21,8 @@
 // -Updated to support 32 slaves
 //
 
-// Application specific variable declarations
+
+
 #include <p18cxxx.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,75 +32,11 @@
 #include <spi.h>
 #include "softuart.h"
 
-#include "can18xx8.h"
-#include "j1939_data.h"
+
+#include "BMS_6s.h"
 
 
-//numer of master unit. The number will be in CAN adress
-#define MASTER_NUMBER 2;
-/*******************************************************/
-
-//config bits (fuses)
-//#pragma config BOREN = SBORDIS
-#pragma config BOREN = OFF
-#pragma config PWRT = OFF       // Power-up Timer Enable bit (PWRT disabled)
-#pragma config BORV = 0         // Brown-out Reset Voltage bits (Maximum Setting)
-
-#pragma config WDT = ON        // Watchdog Timer Enable bit (WDT disabled (control is placed on the SWDTEN bit))
-#pragma config WDTPS = 32768    // Watchdog Timer Postscale Select bits (1:32768)
-
-#pragma config STVREN = OFF 
-#pragma config LVP = OFF        // Single-Supply ICSP Enable bit (Single-Supply ICSP enabled)
-
-#define NODE_EE_ADDRES 0;
-#define BAT_EE_NUMBER 8;
-
-#define set_bit(ADDRESS,BIT) (ADDRESS |= (1L<<BIT))
-#define clear_bit(ADDRESS,BIT) (ADDRESS &= ~(1L<<BIT))
-#define toggle_bit(ADDRESS,BIT) (ADDRESS ^= (1L<<BIT))
-#define test_bit(ADDRESS,BIT) (ADDRESS & (1L<<BIT))
-
-
-int hexCharToInt(BYTE digit);
-int hexToInt(BYTE *h);
-
-
-
-void SestaviTxStr();
-void SestaviCAN1();
-void SestaviCAN2();
-void NaslednjiPort();
-
-void main (void);
-void InterruptHandlerHigh (void);
-void InterruptHandlerLow (void);
-
-J1939_MESSAGE tx_CAN_msg, rx_CAN_msg;
-J1939_SE_ID Can_addrLO, Can_addrHI;
-J1939_SE_ID Can_bootF, Can_nodeF, Can_Mask1, Can_Mask2; 
-
-// CAN module related variables
-enum CAN_RX_MSG_FLAGS RecFlags;
-
-// Application specific initialization code follows
-BYTE V_BatSerNo[8];                              // Battery (slave) number
-BYTE V_BatNo;                                    // Stevilka baterije iz katere beremo podatke
-BYTE V_BatChar[8];                               // Meritev iz baterije
-int V_BatTemp;                                   // Vrednost ki smo jo dobili iz baterije
-unsigned long cellStatuses[10];                  // bug in compiler!!!! we dont need array!
-BYTE V_BatL[32];                                 // Rezultati meritev vseh 8 beterij
-BYTE V_BatH[32];                                 // Rezultati meritev vseh 8 beterij
-char Bat_Tx_Str[40];
-BYTE Rx_Char;
-
-BYTE RxFilterMatch;
-BYTE rx_cnt, tx_cnt;
-BYTE tx_send, rx_tic;
-
-BYTE node_no;
 int Timer100ms=360; //1200*3/10
-
-
 
 //next port - cell for 32 cel master option
 void NaslednjiPort()
@@ -109,10 +46,7 @@ void NaslednjiPort()
 
 	V_BatNo++;                      // in gremo na novo baterijo
     rx_cnt = 0;
-	
-    //setting pins for controllong Xilinx CPLD chip
-	//LATD = ((LATD & 0xF0) | (V_BatNo & 0x07));
-	LATD=V_BatNo;
+	softuart_flush_input_buffer();
 
 	
 
@@ -120,10 +54,10 @@ void NaslednjiPort()
 //CANSendMessage(tx_CAN_msg.Address.SE_ID, &tx_CAN_msg.Data[0], 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
 
 
-	if (V_BatNo == 32){              // If we read thru all ports
+	if (V_BatNo == 6){              // If we read thru all ports
 		j=0;
 
-		for(char i=0;i<=28; i+=4){       //four cells per message
+		for(char i=0;i<=4; i+=4){       //four cells per message
 			if ( CANIsTxReady() )      // Sestavi CAN telegram 1 za MasterA.
         	{			
 		        //memset(Bat_Tx_Str,'\0',sizeof(Bat_Tx_Str)); // Bruši USART buffer
@@ -186,22 +120,49 @@ void NaslednjiPort()
 
     }
 }
+/*********************************************************/
+/*              auxiliary functions                      */
+/*********************************************************/
+int hexCharToInt(BYTE digit)
+{
+	if('0'<=digit && digit<='9')
+		return digit-'0';
+	if('A'<=digit && digit<='F')
+		return digit-'A'+10;
+	if('a'<=digit && digit<='f')
+		return digit-'a'+10;
+	return -1;
+}
 
+int hexToInt(BYTE *h)
+{
+	int i, result=0;
+	int tmp;
+	
+	for(i=0;h[i] && i<8;i++)
+    {
+		tmp = hexCharToInt(h[i]);
+		if(tmp == -1) return result;
+		result = result*0x10+tmp;
+	}
+	return result;
+} 
 /*********************************************************/
 /*                   Main function                       */
 /*********************************************************/
 void main(void)
 {
 
-	TRISD = 0x00; // PortD output
-    PORTD = 0xFF;
-    LATD  = 0x00;
+	//TRISD = 0x00; // PortD output
+    //PORTD = 0xFF;
+    //LATD  = 0x00;
+	OSCCON = 0b01111111;
 
 	ADCON0 = 0x00; //disable A/D converter 
 	ADCON1 = 0x0F; //select all digital 
-    TRISAbits.TRISA0 = 0x0; //changed from 0
-    PORTAbits.RA0           = 0x1;
-	PORTAbits.RA0=1;
+    //TRISAbits.TRISA0 = 0x0; //changed from 0
+    //PORTAbits.RA0           = 0x1;
+	//PORTAbits.RA0=1;
 
     // Initialize TIMER0
     INTCON2bits.TMR0IP = 0;        //Timer0 INT-LOW
@@ -240,40 +201,35 @@ void main(void)
     rx_cnt = 0;
 */
 
-    V_BatNo = 0;  // current battery to read from
+    V_BatNo = 1;  // current battery to read from
     // memset(Bat_Tx_Str,'\0',sizeof(Bat_Tx_Str));
 	// SestaviTxStr();
 
     WDTCONbits.SWDTEN = 1;  // Enable Watch Dog
-
+	BYTE Rx_Char;
 
 	///DEBUG SECTION
 	//detect reset - SEND CAN msg
 	Can_addrLO.Bytes[3] = MASTER_NUMBER;
 	Can_addrLO.Bytes[2] = RCON;
    	CANSendMessage(Can_addrLO.SE_ID, &tx_CAN_msg.Data[0], 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
-
 	char MSG_SAUD[] = {"Ola\n\rPIC:\\>"};
 	unsigned char i = 0;
 	softuart_puts_p( "12345678" );    // "implicit" PSTR
 	
 	softuart_init();
-	softuart_turn_rx_on(); /* redundant - on by default */
+	//softuart_turn_rx_on(); /* redundant - on by default */
 	
 	/*************************************/
 	/*      Main application loop        */
     /*************************************/
 	while(1)
     {    
-	/*	if ( softuart_kbhit() ) {
-			Rx_Char = softuart_getchar();
-
-		}
-*/
 		//sw uart read data
-		if (Timer100ms==360){ //360==100ms
-			Timer100ms=0;
-			tx_CAN_msg.Data[0] =softuart_getchar(); 
+		if ( softuart_kbhit() ) {
+			Rx_Char = softuart_getchar();
+			processReceivedByte(Rx_Char);
+			/*tx_CAN_msg.Data[0] =softuart_getchar(); 
 			tx_CAN_msg.Data[1] =softuart_getchar(); 
 			tx_CAN_msg.Data[2] =softuart_getchar(); 
 			tx_CAN_msg.Data[3] =softuart_getchar(); 
@@ -281,15 +237,29 @@ void main(void)
 			tx_CAN_msg.Data[5] =softuart_getchar(); 
 			tx_CAN_msg.Data[6] =softuart_getchar(); 
 			tx_CAN_msg.Data[7] =softuart_getchar(); 
-	
+			Can_addrLO.SE_ID = 0x040050A2;
 	   		CANSendMessage(Can_addrLO.SE_ID, &tx_CAN_msg.Data[0], 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
-}
-/*
+*/
+		}
+		//1sec timer for sending out the CAN massages
+		if (Timer100ms==3600){ //360==100ms
+			Timer100ms=0;
+
+			Can_addrLO.SE_ID = 0x040050A0;
+	   		CANSendMessage(Can_addrLO.SE_ID, &tx_CAN_msg.Data[0], 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
+		}
+		//receive timeout
+		if(rx_tic >= 3600) {
+			rx_tic=0;
+			//NaslednjiPort();
+		}
+
+/*			//FRAME RECEIVED ON UART
 			tx_data[0] = '>';  3E
 			tx_data[1] = Bat_status; 
 			tx_data[2] = '-'; 2D
 			tx_data[3] = to_hex(ADC_result >> 8);
-			tx_data[4] = to_hex(ADC_result >> 4);
+			tx_data[4] = to_heex(ADC_rsult >> 4);
 			tx_data[5] = to_hex(ADC_result & 0x000F);
 			tx_data[6] = '\r';  A
 			tx_data[7] = '\0';  D
@@ -303,6 +273,63 @@ void main(void)
         ClrWdt();
     } // Do this forever
 }
+void processReceivedByte(char Rx_Char){
+			rx_tic = 0;                // Resetiraj TIME-OUT števec
+
+					
+            //if ((Rx_Char == '>') || (Rx_Char == '-'))   // Èakaj na zaèetni znak ali limiter za status
+            if ((Rx_Char == '>'))   // Èakaj na zaèetni znak ali limiter za status
+            {
+                 rx_cnt = 0; //counter of received bytes
+                 V_BatChar[rx_cnt++] = '0'; 
+            }
+            else
+            {
+ 				if (rx_cnt > 0)        // If we allready received the first sign
+                {    
+                   // if (Rx_Char == '\0' && V_BatChar[rx_cnt-1]==0x0D && V_BatChar[2]==0x2D) // if we received the whole message
+                    if (Rx_Char == 0x0D && V_BatChar[2]==0x2D) // if we received the whole message
+                    {
+  						rx_cnt = 0; 
+						//V_BatChar[rx_cnt++] = '\0';
+                        
+						V_BatTemp = hexToInt(&V_BatChar[0]); // Pretvori v vrednost
+                        //if (V_BatTemp > 0)                   // Ali je vrednost smiselna
+                        //{
+                            //V_Bat[V_BatNo] = V_BatTemp;      // Zato jo zapiši
+                            //V_Bat[V_BatNo] =0xFF;
+							
+							//batt statuses
+							if(V_BatChar[1]==0x4F) set_bit(cellStatuses[0], V_BatNo); //ballencing 0x4F
+							else clear_bit(cellStatuses[0], V_BatNo);
+							
+							V_BatL[V_BatNo] = V_BatChar[3];	
+							V_BatH[V_BatNo] = V_BatChar[4];
+
+tx_CAN_msg.Data[0] =V_BatChar[0];
+tx_CAN_msg.Data[1] =V_BatChar[1];
+tx_CAN_msg.Data[2] =V_BatChar[2];
+tx_CAN_msg.Data[3] =V_BatChar[3];
+tx_CAN_msg.Data[4] =V_BatChar[4];
+tx_CAN_msg.Data[5] =V_BatChar[5];
+tx_CAN_msg.Data[6] =V_BatChar[6];
+tx_CAN_msg.Data[7] =V_BatChar[7];
+Can_addrLO.SE_ID = 0x040050A1;
+CANSendMessage(Can_addrLO.SE_ID, &tx_CAN_msg.Data[0], 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
+
+
+						//	NaslednjiPort();
+
+                        //} 
+                        //memset(V_BatChar,'\0',sizeof(V_BatChar)); //discard if anything left in UART
+                    } else
+                    {                                       // Samo spravi sprejeti znak     
+                        V_BatChar[rx_cnt++] = Rx_Char;      // in se postavi na naslednji prostor
+                    }
+                }
+            }
+}
+
 
 /*********************************************************/
 /*                       interrupts                      */

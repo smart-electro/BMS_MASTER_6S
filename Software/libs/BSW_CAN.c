@@ -49,14 +49,10 @@
  *                              mode would not compile.  (Rev 1.2)
  *
  ********************************************************************/
-#include "can18xx8.h"
-#include "BMS_6s.h"
-
-
+#include "BSW_CAN.h"
 
 #if defined(MCHP_C18)
     #include <p18cxxx.h>    // p18cxxx.h must have current processor
-                            // defined.
 #endif
 
 #if defined(HITECH_C18)
@@ -767,3 +763,27 @@ BOOL CANReceiveMessage(unsigned long *id,
     return TRUE;
 }
 
+void CanConfig(){
+    // Initialize CAN module with no message filtering
+    // CANInitialize(SJW, BRP, PHSEG1, PHSEG2, PROPSEG, config);
+    // 8MHz Fosc 250Kb/s
+    // 8MHz -> 2MHz @ 250Khz = 8Tq (1+2+3+2)
+    CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //256kb at 8Mhz crystal
+    // CANInitialize(1 ,0x06 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); USB-CAN
+    //CANSetOperationMode(CAN_OP_MODE_CONFIG);
+    //CANSetFilter(CAN_FILTER_B1_F1, Can_bootF.SE_ID, CAN_CONFIG_XTD_MSG);
+    //CANSetFilter(CAN_FILTER_B1_F2, Can_nodeF.SE_ID, CAN_CONFIG_XTD_MSG);
+    //CANSetMask(CAN_MASK_B1, Can_Mask1.SE_ID, CAN_CONFIG_XTD_MSG);
+    //CANSetFilter(CAN_FILTER_B2_F1, Can_addrLO.SE_ID, CAN_CONFIG_XTD_MSG);
+    //CANSetMask(CAN_MASK_B2, Can_Mask2.SE_ID, CAN_CONFIG_XTD_MSG);
+    //CANSetOperationMode(CAN_OP_MODE_NORMAL);
+
+
+	///DEBUG SECTION
+	//detect reset - SEND CAN msg
+	unsigned char data[8];
+	data[0]=0x12345678;
+   	CANSendMessage(0x04040404, &data[0] , 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
+
+
+}

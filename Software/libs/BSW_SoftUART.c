@@ -138,8 +138,7 @@ V0.4 (10/2010)
   POSSIBILITY OF SUCH DAMAGE. */
 
 #include <p18cxxx.h>
-#include "softuart.h"
-#include "BMS_6s.h"
+#include "BSW_SoftUART.h"
 
 #define SU_TRUE    1
 #define SU_FALSE   0
@@ -337,7 +336,11 @@ void softuart_init( void )
 	set_tx_pin_high(); /* mt: set to high to avoid garbage on init */
 
 	io_init();
-	//timer_init();
+	//DEBUG;
+	char MSG_SAUD[] = {"Ola\n\rPIC:\\>"};
+	softuart_puts_p( "12345678" );    // "implicit" PSTR
+
+
 }
 
 static void idle(void)
