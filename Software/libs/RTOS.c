@@ -1,6 +1,9 @@
 #include "BSW_Timers.h"
 #include "BSW_GPIO.h"
- #include <p18cxxx.h>
+#include "APP_SendBmsData.h"
+#include "APP_ReadBmsSlave.h"
+#include <p18cxxx.h>
+
 
 //real time operating system - scheduler
 void RTOS(){
@@ -13,14 +16,24 @@ void RTOS(){
 		LED1_TOGGLE
 
 		
+		sendCellVoltages();
+		sendCellBalancingStatus();	
+
+			
+
+		
 	}
 	if(Timer100ms){
 		Timer100ms=0;
 		//100ms task read slave
-		//LED1_OFF
-			LED2_TOGGLE
+		sendBmsStatus();
+		
+		SlaveReceiveTimeout++;
+		LED2_TOGGLE
 	}
 
+	
+	readBmsSlaves();
 
 }
 

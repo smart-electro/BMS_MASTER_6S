@@ -1,3 +1,98 @@
+#include "BSW_SoftUART.h"
+#include "APP_ReadBmsSlave.h"
+#include "APP_AuxFunctions.h"
+
+char rx_cnt=0;
+char BatNo=0;
+char BatChar[8];
+
+void processReceivedByte(char Rx_Char);
+void NaslednjiPort();
+
+#define CELL_BALANCING 0x4f  // 0 character
+
+void readBmsSlaves()
+{
+
+
+		//sw uart read data
+		if ( softuart_kbhit() ) {
+			processReceivedByte(softuart_getchar());
+		}
+
+		//receive timeout
+		if(SlaveReceiveTimeout >= 2) {
+			NaslednjiPort();
+		}
+
+
+
+
+}
+void NaslednjiPort()
+{
+    char j;
+	//unsigned long LocalcellStatuses=cellStatuses[0];
+	SlaveReceiveTimeout=0;
+	BatNo++;                      // in gremo na novo baterijo
+    rx_cnt = 0;
+	softuart_flush_input_buffer();
+	
+	if (BatNo == 6){              // If we read thru all ports
+		BatNo = 0;
+	}
+
+}
+
+
+
+void processReceivedByte(char Rx_Char){
+	SlaveReceiveTimeout = 0;                // Resetiraj TIME-OUT števec
+
+	if ((Rx_Char == '>'))   // Èakaj na zaèetni znak ali limiter za status
+	{
+		rx_cnt = 0; //counter of received bytes
+		BatChar[rx_cnt++] = '0'; 
+	}
+	else
+	{
+		if (rx_cnt > 0)        // If we allready received the first sign
+		{    
+			// if (Rx_Char == '\0' && V_BatChar[rx_cnt-1]==0x0D && V_BatChar[2]==0x2D) // if we received the whole message
+			if (Rx_Char == 0x0D && BatChar[2]==0x2D) // if we received the whole message
+			{
+				rx_cnt = 0; 
+                        
+				 
+				BatteryCells[BatNo].Voltage = (unsigned char)hexToInt(&BatChar[0]); // Pretvori v vrednost
+				BatteryCells[BatNo].PWM=BatChar[5];
+
+				//batt statuses - todo
+			//	if(V_BatChar[1]==CELL_BALANCING) set_bit(cellStatuses[0], BatNo); //ballencing 0x4F
+			//	else clear_bit(cellStatuses[0], BatNo);
+							
+			//	V_BatL[V_BatNo] = V_BatChar[3];	
+			//	V_BatH[V_BatNo] = V_BatChar[4];
+			
+
+				NaslednjiPort();
+
+			} else
+           	{                                       // Samo spravi sprejeti znak     
+       			BatChar[rx_cnt++] = Rx_Char;      // in se postavi na naslednji prostor
+            }
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
 //next port - cell for 32 cel master option
 
 /*

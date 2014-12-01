@@ -1,19 +1,9 @@
+#include "APP_AuxFunctions.h"
 /*********************************************************/
 /*              auxiliary functions                      */
 /*********************************************************/
-/*int hexCharToInt(BYTE digit)
-{
-	if('0'<=digit && digit<='9')
-		return digit-'0';
-	if('A'<=digit && digit<='F')
-		return digit-'A'+10;
-	if('a'<=digit && digit<='f')
-		return digit-'a'+10;
-	return -1;
-}
 
-int hexToInt(BYTE *h)
-{
+int hexToInt(char *h){
 	int i, result=0;
 	int tmp;
 	
@@ -24,4 +14,16 @@ int hexToInt(BYTE *h)
 		result = result*0x10+tmp;
 	}
 	return result;
-} */
+}
+
+int hexCharToInt(char digit)
+{
+	if('0'<=digit && digit<='9')
+		return digit-'0';
+	if('A'<=digit && digit<='F')
+		return digit-'A'+10;
+	if('a'<=digit && digit<='f')
+		return digit-'a'+10;
+	return -1;
+}
+
