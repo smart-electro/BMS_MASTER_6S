@@ -1,4 +1,8 @@
-char TEMP1=0;
-char TEMP2=0;
-char TEMP3=0;
-char TEMP4=0;
+#define TABLE_LEN 200
+#define ADC_ChanalNo 4
+
+signed int TdC(unsigned int tp_temp);    //Temperatura iz LOOK-up tabele
+unsigned char Temperature[ADC_ChanalNo];
+unsigned char Temperatura(unsigned int tp_temp);    //Temperatura iz LOOK-up tabele
+
+void CalcTemps();

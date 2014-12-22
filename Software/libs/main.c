@@ -21,36 +21,35 @@
 // -Updated to support 32 slaves
 //
 #include <p18cxxx.h>
-#include "rtos.h"
+#include "RTOS.h"
 #include "BSW_Timers.h"
-#include "BSW_CAN.h"
 #include "BSW_GPIO.h"
+#include "BSW_CAN.h"
+#include "BSW_ReadADC.h"
+#include "APP_Settings.h"
+#include "BSW_SoftUART.h"
 
-//
-
-/*
-	//TRISD = 0x00; // PortD output
-    //PORTD = 0xFF;
-    //LATD  = 0x00;
-	OSCCON = 0b01111111;
-
-	ADCON0 = 0x00; //disable A/D converter 
-	ADCON1 = 0x0F; //select all digital 
-    //TRISAbits.TRISA0 = 0x0; //changed from 0
-    //PORTAbits.RA0           = 0x1;
-	//PORTAbits.RA0=1;
-
-*/
 /*********************************************************/
 /*                   Main function                       */
 /*********************************************************/
 void main(void)
 {
 	WDTCONbits.SWDTEN = 1;  // Enable Watch Dog
-	RTOS_TimerConfig();
-	CanConfig();
 	GpioConfig();
-	//cycicaly calling RTOS (Real time Operating System)
+	RTOS_TimerConfig();
+
+	CanConfig();
+	readSettings();
+	ADC_Init();
+	softuart_init();
+
+	//disable comparator!!
+	CMCONbits.CM0=1;
+	CMCONbits.CM1=1;
+	CMCONbits.CM2=1;
+
+	
+	//cycicaly calling RTOS (Real time Operating System)	
 	while(1)
     { 
 		RTOS();

@@ -1,10 +1,14 @@
 #include "BSW_SoftUART.h"
 #include "APP_ReadBmsSlave.h"
 #include "APP_AuxFunctions.h"
+#include "BSW_GPIO.h"
+#include <p18cxxx.h>
+#include "BSW_CAN.h"
+#include "RTOS.h"
+unsigned char rx_cnt=0;
 
-char rx_cnt=0;
-char BatNo=0;
-char BatChar[8];
+unsigned char BatChar[8];
+
 
 void processReceivedByte(char Rx_Char);
 void NaslednjiPort();
@@ -22,33 +26,73 @@ void readBmsSlaves()
 
 		//receive timeout
 		if(SlaveReceiveTimeout >= 2) {
-			NaslednjiPort();
-		}
+			SlaveReceiveTimeout=0;
+			//slaves can have +-10% baudrate. If timeout start sweping the baudrate (timer0)
+			// 8Mhz/4 = 2M samples/s
+			//			    1110*3 -> WriteTimer0(65535-600);64935
+			//			    1130*3 -> WriteTimer0(65535-589);64946
+			//default		1150*3 -> WriteTimer0(65535-580);64955
+			//			    1170*3 -> WriteTimer0(65535-569);64966
+			//			    1190*3 -> WriteTimer0(65535-560);64975
+			//			    1250*3 -> WriteTimer0(65535-533);65002
+			SlaveReceiveMasterTimeout++;
+			Timer0Value+=5;
+ 			if(Timer0Value >= 65100) Timer0Value=64935;
+ 			if(Timer0Value <= 64935) Timer0Value=64935;
 
+			if(SlaveReceiveMasterTimeout >= 35) {	
+				BatteryCells[BatNo].Voltage=0xff; //clear values
+				BatteryCells[BatNo].PWM=0xff;
+				clear_bit(BmsStatus0, BatNo);     //clear status bit
+				NaslednjiPort();
+			}
+		}
 
 
 
 }
 void NaslednjiPort()
 {
-    char j;
 	//unsigned long LocalcellStatuses=cellStatuses[0];
 	SlaveReceiveTimeout=0;
-	BatNo++;                      // in gremo na novo baterijo
+	SlaveReceiveMasterTimeout=0;
+	
+
+    BatNo++;                      // in gremo na novo baterijo
+	if (BatNo >= 6){              // If we read thru all ports
+		BatNo = 0;
+		
+		//check if all cells are full
+		unsigned char countFull=0;
+		unsigned char countROK=0;
+		set_bit(BmsStatus0, 7); //we set unused but so if everithing is ok status byte0 is 0xFF
+		BmsStatus1=0;  
+		//loop through all cells
+		for(char i=0; i<=5; i++){ 
+			if(BatteryCells[i].PWM != 0){
+				countFull++;
+				set_bit(BmsStatus1, i); 
+ 			}
+			if(BatteryCells[i].Voltage != 0xFF) countROK++;  
+		}
+		if(countFull == 6 ) set_bit(BmsStatus1, 0);
+		
+		if(countROK  == 6 ) set_bit(BmsStatus0, 6);
+		else clear_bit(BmsStatus0, 6);
+		//todo low & off
+
+		
+
+	}	
     rx_cnt = 0;
 	softuart_flush_input_buffer();
-	
-	if (BatNo == 6){              // If we read thru all ports
-		BatNo = 0;
-	}
-
 }
 
 
 
 void processReceivedByte(char Rx_Char){
-	SlaveReceiveTimeout = 0;                // Resetiraj TIME-OUT števec
-
+	
+	
 	if ((Rx_Char == '>'))   // Èakaj na zaèetni znak ali limiter za status
 	{
 		rx_cnt = 0; //counter of received bytes
@@ -59,22 +103,23 @@ void processReceivedByte(char Rx_Char){
 		if (rx_cnt > 0)        // If we allready received the first sign
 		{    
 			// if (Rx_Char == '\0' && V_BatChar[rx_cnt-1]==0x0D && V_BatChar[2]==0x2D) // if we received the whole message
-			if (Rx_Char == 0x0D && BatChar[2]==0x2D) // if we received the whole message
+			if (rx_cnt==7 && Rx_Char == 0x00 && BatChar[6]==0x0D && BatChar[2]==0x2D) // if we received the whole message
 			{
 				rx_cnt = 0; 
                         
-				 
-				BatteryCells[BatNo].Voltage = (unsigned char)hexToInt(&BatChar[0]); // Pretvori v vrednost
+				unsigned int V_BatTemp;  
+				V_BatTemp=(((unsigned int)(BatChar[3]))<<8) + BatChar[4];				
+				V_BatTemp=V_BatTemp-2000;
+				V_BatTemp=((unsigned int)V_BatTemp)/10;
+
+				BatteryCells[BatNo].Voltage=(char)V_BatTemp;				
 				BatteryCells[BatNo].PWM=BatChar[5];
+				set_bit(BmsStatus0, BatNo);
 
-				//batt statuses - todo
-			//	if(V_BatChar[1]==CELL_BALANCING) set_bit(cellStatuses[0], BatNo); //ballencing 0x4F
-			//	else clear_bit(cellStatuses[0], BatNo);
-							
-			//	V_BatL[V_BatNo] = V_BatChar[3];	
-			//	V_BatH[V_BatNo] = V_BatChar[4];
-			
-
+				//todo
+				BatteryCells[BatNo].MaxBalancing=(char)Timer0Value;
+				BatteryCells[BatNo].MaxVoltage=(char)(Timer0Value>>8);
+				
 				NaslednjiPort();
 
 			} else
@@ -84,183 +129,3 @@ void processReceivedByte(char Rx_Char){
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-//next port - cell for 32 cel master option
-
-/*
-void NaslednjiPort()
-{
-    char j;
-	unsigned long LocalcellStatuses=cellStatuses[0];
-
-	V_BatNo++;                      // in gremo na novo baterijo
-    rx_cnt = 0;
-	softuart_flush_input_buffer();
-
-	
-
-//tx_CAN_msg.Data[0]=V_BatNo;
-//CANSendMessage(tx_CAN_msg.Address.SE_ID, &tx_CAN_msg.Data[0], 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
-
-
-	if (V_BatNo == 6){              // If we read thru all ports
-		j=0;
-
-		for(char i=0;i<=4; i+=4){       //four cells per message
-			if ( CANIsTxReady() )      // Sestavi CAN telegram 1 za MasterA.
-        	{			
-		        //memset(Bat_Tx_Str,'\0',sizeof(Bat_Tx_Str)); // Bruši USART buffer
-		        //SestaviTxStr();            // Saestavi USART telegram za vse baterije
-		        //tx_send = 1;               // FLAG za pošiljanje
-
-
-
-				tx_CAN_msg.Data[0] = V_BatL[i];
-    			tx_CAN_msg.Data[1] = V_BatH[i];
-			    tx_CAN_msg.Data[2] = V_BatL[i+1];
-			    tx_CAN_msg.Data[3] = V_BatH[i+1];
-			    tx_CAN_msg.Data[4] = V_BatL[i+2];
-			    tx_CAN_msg.Data[5] = V_BatH[i+2];
-			    tx_CAN_msg.Data[6] = V_BatL[i+3];
-			    tx_CAN_msg.Data[7] = V_BatH[i+3];
-
-				// CAN adresses
-			    //node_no = (Read_b_eep(0) << 2);
-			    //Can_addrLO.SE_ID = 0x040050F3;
-			    //Can_addrLO.Bytes[2] = Can_addrLO.Bytes[2] | node_no;
-			    //Can_addrHI.SE_ID = 0x040150F3;
-			    //Can_addrHI.Bytes[2] = Can_addrHI.Bytes[2] | node_no;
-			    Can_addrLO.SE_ID = 0x040050F3;
-			    Can_addrLO.Bytes[2] = j;
-				Can_addrLO.Bytes[3] = MASTER_NUMBER;
-			    tx_CAN_msg.Length.Len = 8;
-           		CANSendMessage(Can_addrLO.SE_ID, &tx_CAN_msg.Data[0], 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
- 
-		  		j++;
-		        V_BatNo = 0;               // Postavi se na prvo baterijo
-				LATD=0;
-				_delay(1000);
-			}
-		}      
-   		//status message
-		//long is dysplaied in reverse order
-		//Example: FF FF FF FE - the first battery is not ballancing all others are
-
-
-    }
-}
-
-void processReceivedByte(char Rx_Char){
-			rx_tic = 0;                // Resetiraj TIME-OUT števec
-
-					
-            //if ((Rx_Char == '>') || (Rx_Char == '-'))   // Èakaj na zaèetni znak ali limiter za status
-            if ((Rx_Char == '>'))   // Èakaj na zaèetni znak ali limiter za status
-            {
-                 rx_cnt = 0; //counter of received bytes
-                 V_BatChar[rx_cnt++] = '0'; 
-            }
-            else
-            {
- 				if (rx_cnt > 0)        // If we allready received the first sign
-                {    
-                   // if (Rx_Char == '\0' && V_BatChar[rx_cnt-1]==0x0D && V_BatChar[2]==0x2D) // if we received the whole message
-                    if (Rx_Char == 0x0D && V_BatChar[2]==0x2D) // if we received the whole message
-                    {
-  						rx_cnt = 0; 
-						//V_BatChar[rx_cnt++] = '\0';
-                        
-						V_BatTemp = hexToInt(&V_BatChar[0]); // Pretvori v vrednost
-                        //if (V_BatTemp > 0)                   // Ali je vrednost smiselna
-                        //{
-                            //V_Bat[V_BatNo] = V_BatTemp;      // Zato jo zapiši
-                            //V_Bat[V_BatNo] =0xFF;
-							
-							//batt statuses
-							if(V_BatChar[1]==0x4F) set_bit(cellStatuses[0], V_BatNo); //ballencing 0x4F
-							else clear_bit(cellStatuses[0], V_BatNo);
-							
-							V_BatL[V_BatNo] = V_BatChar[3];	
-							V_BatH[V_BatNo] = V_BatChar[4];
-
-tx_CAN_msg.Data[0] =V_BatChar[0];
-tx_CAN_msg.Data[1] =V_BatChar[1];
-tx_CAN_msg.Data[2] =V_BatChar[2];
-tx_CAN_msg.Data[3] =V_BatChar[3];
-tx_CAN_msg.Data[4] =V_BatChar[4];
-tx_CAN_msg.Data[5] =V_BatChar[5];
-tx_CAN_msg.Data[6] =V_BatChar[6];
-tx_CAN_msg.Data[7] =V_BatChar[7];
-Can_addrLO.SE_ID = 0x040050A1;
-CANSendMessage(Can_addrLO.SE_ID, &tx_CAN_msg.Data[0], 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
-
-
-						//	NaslednjiPort();
-
-                        //} 
-                        //memset(V_BatChar,'\0',sizeof(V_BatChar)); //discard if anything left in UART
-                    } else
-                    {                                       // Samo spravi sprejeti znak     
-                        V_BatChar[rx_cnt++] = Rx_Char;      // in se postavi na naslednji prostor
-                    }
-                }
-            }
-}
-
-
-    V_BatNo = 1;  // current battery to read from
-    // memset(Bat_Tx_Str,'\0',sizeof(Bat_Tx_Str));
-	// SestaviTxStr();
-
-    
-	BYTE Rx_Char;
-
-
-	
-	softuart_init();
-	//softuart_turn_rx_on(); 
-	
-
-	     // Main application loop       
-
-	while(1)
-    {    
-		//sw uart read data
-		if ( softuart_kbhit() ) {
-			Rx_Char = softuart_getchar();
-			processReceivedByte(Rx_Char);
-
-		}
-		//1sec timer for sending out the CAN massages
-		if (Timer100ms==3600){ //360==100ms
-			Timer100ms=0;
-
-			Can_addrLO.SE_ID = 0x040050A0;
-	   		CANSendMessage(Can_addrLO.SE_ID, &tx_CAN_msg.Data[0], 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
-		}
-		//receive timeout
-		if(rx_tic >= 3600) {
-			rx_tic=0;
-			//NaslednjiPort();
-		}
-
-
-
-
-
-
-       
-    } // Do this forever
-
-
-
-
-*/

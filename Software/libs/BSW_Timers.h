@@ -1,3 +1,4 @@
-int Timer100ms=0; //
-int Timer1s=0; //
+//#define BSW_TIMERS_H
 void RTOS_TimerConfig();
+
+

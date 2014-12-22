@@ -3,7 +3,8 @@
 /*              auxiliary functions                      */
 /*********************************************************/
 
-int hexToInt(char *h){
+
+/*int hexToInt(char *h){
 	int i, result=0;
 	int tmp;
 	
@@ -26,4 +27,4 @@ int hexCharToInt(char digit)
 		return digit-'a'+10;
 	return -1;
 }
-
+*/
