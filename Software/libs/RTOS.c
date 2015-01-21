@@ -34,14 +34,17 @@ void RTOS(){
 	//1s task
 	if(Timer1s){
 		Timer1s=0;
-	
+		LED1_TOGGLE
 		
-		//CalcTemps();
-		//sendCellMinVoltage_send=1;	
-		ADC_Data();
+		
+		sendCellMinVoltage_send=1;	
+		sendCellMaxBalancing_send=1;
+		sendCellMaxVoltage_send=1;
+		
 		if (ADC_OK)
 		{
-            ADC_ChanelCnt = 0;                  //Zaženi ADC sekvencao
+            CalcTemps();
+			ADC_ChanelCnt = 0;                  //Zaženi ADC sekvencao
             ADC_SampleCnt = 0;
             SelChanConvADC(ADC_Chanels[ADC_ChanelCnt]);
             ADC_OK = 0;
@@ -50,12 +53,12 @@ void RTOS(){
 	}
 	if(Timer100ms){
 		Timer100ms=0;
+		ADC_Data();
 		//100ms task read slave
 		sendBmsStatus_send=1;
 		sendCellVoltages_send=1;
 		sendCellBalancingStatus_send=1;
-		sendCellMaxBalancing_send=1;
-		sendCellMaxVoltage_send=1;
+
 
 		SlaveReceiveTimeout++;
 		
@@ -86,7 +89,7 @@ void Timer0_int(void) //##/////////////////////////////////////////////////////
 	INTCONbits.TMR0IF=0;	// Clear Timer 0 overflow interrupt flag
 	//WriteTimer0(65000);
 	WriteTimer0(Timer0Value); 	
-	LED1_TOGGLE
+	
 	interruptCAllback(); //SW uart
 
 	T1CONbits.TMR1ON=1; //start back timer1					

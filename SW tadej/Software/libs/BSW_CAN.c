@@ -24,7 +24,7 @@
  * license.
  *
  * THIS SOFTWARE IS PROVIDED IN AN “AS IS” CONDITION. NO WARRANTIES,
- * WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING BUT NOT LIMITED
+ * WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
  * TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
  * PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
  * IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR
@@ -50,7 +50,7 @@
  *
  ********************************************************************/
 #include "BSW_CAN.h"
-#include "APP_Settings.h"
+
 #if defined(MCHP_C18)
     #include <p18cxxx.h>    // p18cxxx.h must have current processor
 #endif
@@ -172,10 +172,10 @@ static void RegsToCANID(BYTE* ptr,
                     config);
 
     RXB0CON = config & CAN_CONFIG_MSG_BITS;
-    /*if ( (config & CAN_CONFIG_DBL_BUFFER_BIT)
+    if ( (config & CAN_CONFIG_DBL_BUFFER_BIT)
                 == CAN_CONFIG_DBL_BUFFER_ON )
         RXB0CONbits.RXB0DBEN = 1;
-*/
+
 
     RXB1CON = RXB0CON;
 
@@ -764,28 +764,13 @@ BOOL CANReceiveMessage(unsigned long *id,
 }
 
 void CanConfig(){
+	unsigned char data[8];
     // Initialize CAN module with no message filtering
     // CANInitialize(SJW, BRP, PHSEG1, PHSEG2, PROPSEG, config);
     // 8MHz Fosc 250Kb/s
     // 8MHz -> 2MHz @ 250Khz = 8Tq (1+2+3+2)
-    //CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //256kb at 8Mhz crystal
-	
-	switch(BaudrateSettings){
-	    case 2  :  //250kbs
-	       CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //256kb at 8Mhz crystal
-	       break; 
-	    case 3  :  //500kbs
-	       CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //500kb at 8Mhz crystal
-	       break; 
-	    default :
-	       CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //256kb at 8Mhz crystal
-	
-	}    
-//	BRGCON1=1;
-//	BRGCON2=0xbc;
-//	BRGCON3=1;
-
-	// CANInitialize(1 ,0x06 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); USB-CAN
+    CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //256kb at 8Mhz crystal
+    // CANInitialize(1 ,0x06 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); USB-CAN
     //CANSetOperationMode(CAN_OP_MODE_CONFIG);
     //CANSetFilter(CAN_FILTER_B1_F1, Can_bootF.SE_ID, CAN_CONFIG_XTD_MSG);
     //CANSetFilter(CAN_FILTER_B1_F2, Can_nodeF.SE_ID, CAN_CONFIG_XTD_MSG);
@@ -797,7 +782,6 @@ void CanConfig(){
 
 	///DEBUG SECTION
 	//detect reset - SEND CAN msg
-	unsigned char data[8];
 	data[0]=0x12345678;
    	CANSendMessage(0x04040404, &data[0] , 8, CAN_TX_PRIORITY_0 & CAN_TX_XTD_FRAME & CAN_TX_NO_RTR_FRAME);
 

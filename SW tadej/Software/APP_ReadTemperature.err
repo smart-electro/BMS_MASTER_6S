@@ -1,0 +1,1 @@
+Error[1521] D:\Razvoj\MCU\MicrochipPIC\BMS_Kristjan\BMS_MASTER_6S-master\Software\libs\APP_ReadTemperature.c 22 : This feature is not implemented in compiler. There may be a definition of external symbol 'T16bit' found instead of its declaration

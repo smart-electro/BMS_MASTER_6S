@@ -138,9 +138,8 @@ V0.4 (10/2010)
   POSSIBILITY OF SUCH DAMAGE. */
 
 #include <p18cxxx.h>
-#include "BSW_SoftUART.h"
-#include "APP_ReadBmsSlave.h"
-#include "BSW_GPIO.h"
+#include "softuart.h"
+#include "BMS_6s.h"
 
 #define SU_TRUE    1
 #define SU_FALSE   0
@@ -164,12 +163,11 @@ volatile static unsigned short internal_tx_buffer; /* ! mt: was type uchar - thi
 //#define set_tx_pin_low()       ( SOFTUART_TXPORT &= ~( 1 << SOFTUART_TXBIT ) )
 //#define get_rx_pin_status()    ( SOFTUART_RXPIN  &   ( 1 << SOFTUART_RXBIT ) )
 #define set_tx_pin_high()      PORTAbits.RA0=1;
-#define set_tx_pin_low()       PORTAbits.RA0
-#define get_rx_pin_status()    PORTCbits.RC0;
-/*
-unsigned char get_rx_pin_status(){
+#define set_tx_pin_low()       PORTAbits.RA0=0;
+//#define get_rx_pin_status()    PORTCbits.RC1;
+char get_rx_pin_status(){
     
-	switch(BatNo){
+	switch(V_BatNo){
     	case 0:
 			return PORTCbits.RC0;
     	case 1:
@@ -182,20 +180,16 @@ unsigned char get_rx_pin_status(){
 			return PORTDbits.RD4;
     	case 5:
 			return PORTDbits.RD6;
-		default:
-			return 0;			
-	}	
+	}
+	return 0;
 }
-*/
-
 //#define set_tx_pin_high()      ( PORTA |=  ( 1 << RA0 ) )
 //#define set_tx_pin_low()       ( PORTA &= ~( 1 << RA0 ) )
 //#define get_rx_pin_status()    ( PORTA  &   ( 1 << RA1 ) )
 
 void interruptCAllback(void)
 {
-	//PORTAbits.RA0 = PORTAbits.RA0 ^ 1;
-
+//PORTAbits.RA0 = PORTAbits.RA0 ^ 1;
 	static unsigned char flag_rx_waiting_for_stop_bit = SU_FALSE;
 	static unsigned char rx_mask;
 	
@@ -205,9 +199,9 @@ void interruptCAllback(void)
 	
 	unsigned char start_bit, flag_in;
 	unsigned char tmp;
-
+	
 	// Transmitter Section
-	/*if ( flag_tx_busy == SU_TRUE ) {
+	if ( flag_tx_busy == SU_TRUE ) {
 		tmp = timer_tx_ctr;
 		if ( --tmp == 0 ) { // if ( --timer_tx_ctr <= 0 )
 			if ( internal_tx_buffer & 0x01 ) {
@@ -223,11 +217,10 @@ void interruptCAllback(void)
 			}
 		}
 		timer_tx_ctr = tmp;
-	}*/
-		
+	}
+
 	// Receiver Section
 	if ( flag_rx_off == SU_FALSE ) {
-
 		if ( flag_rx_waiting_for_stop_bit ) {
 			if ( --timer_rx_ctr == 0 ) {
 				flag_rx_waiting_for_stop_bit = SU_FALSE;
@@ -287,7 +280,7 @@ static void io_init(void)
 	//ADCON1 = 0x0F; //select all digital 
 
     //TRANSMIT SECTION
-	//TRISAbits.TRISA0 = 0x0;
+	//TRIS_SWTXD.TRISbit_SWTXD = 0x0;
     //SWTXD.SWTXDpin           = 0x1; 
 	
 
@@ -344,11 +337,7 @@ void softuart_init( void )
 	set_tx_pin_high(); /* mt: set to high to avoid garbage on init */
 
 	io_init();
-	//DEBUG;
-	//char MSG_SAUD[] = {"Ola\n\rPIC:\\>"};
-	//softuart_puts_p( "12345678" );    // "implicit" PSTR
-
-
+	//timer_init();
 }
 
 static void idle(void)
@@ -372,32 +361,20 @@ char softuart_getchar( void )
 {
 	char ch;
 
-	/*while ( qout == qin ) {
+	while ( qout == qin ) {
 		idle();
 	}
 	ch = inbuf[qout];
 	if ( ++qout >= SOFTUART_IN_BUF_SIZE ) {
 		qout = 0;
-	}*/
-
-	if(qout != qin){
-		ch = inbuf[qout];
-		if ( ++qout >= SOFTUART_IN_BUF_SIZE ) {
-			qout = 0;
-		}
-	}else ch=0xFF;	
+	}
 	
 	return( ch );
 }
 
 unsigned char softuart_kbhit( void )
 {
-	if( qin != qout ){
-		return 1;
-	}
-	else{
-		return 0;
-	}
+	return( qin != qout );
 }
 
 void softuart_flush_input_buffer( void )

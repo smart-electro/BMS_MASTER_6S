@@ -1,8 +1,0 @@
-_OpenUSART: CODE, 32662 0 106
-_main: CODE, 32608 0 54
-__initialization: CODE, 32516 0 38
-_putsUSART: CODE, 32478 0 38
-_WriteUSART: CODE, 32458 0 20
-_Delay1Second: CODE, 32560 0 48
-_SetupClock: CODE, 32438 0 8
-Total: 312
