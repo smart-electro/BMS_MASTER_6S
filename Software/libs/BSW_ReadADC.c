@@ -27,7 +27,7 @@ void ADC_Data(void)
 		unsigned char tp_cnt =0;
 	    ADC_sample[ADC_ChanelCnt] +=  ReadADC();
 	    ADC_ChanelCnt++;
-	    if (ADC_ChanelCnt >= ADC_ChanalNo)
+	    if (ADC_ChanelCnt >= ADC_ChanalNo) //16x sampeling
 	    {
 	        ADC_ChanelCnt = 0;
 	        ADC_SampleCnt++;
@@ -43,6 +43,6 @@ void ADC_Data(void)
 	        } 
 	    }
 	    if (ADC_OK == 0) SelChanConvADC(ADC_Chanels[ADC_ChanelCnt]);
-		ConvertADC(); 
+	
 	}
 }

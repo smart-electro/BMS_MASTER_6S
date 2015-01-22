@@ -34,7 +34,7 @@ void RTOS(){
 	//1s task
 	if(Timer1s){
 		Timer1s=0;
-		LED1_TOGGLE
+		
 		
 		
 		sendCellMinVoltage_send=1;	
@@ -84,15 +84,18 @@ void RTOS(){
 #pragma interrupt Timer0_int
 void Timer0_int(void) //##/////////////////////////////////////////////////////
 {
-	T1CONbits.TMR1ON=0;  //stop timer1
+	//T1CONbits.TMR1ON=0;  //stop timer1
 
 	INTCONbits.TMR0IF=0;	// Clear Timer 0 overflow interrupt flag
 	//WriteTimer0(65000);
+	
 	WriteTimer0(Timer0Value); 	
 	
 	interruptCAllback(); //SW uart
 
-	T1CONbits.TMR1ON=1; //start back timer1					
+	//T1CONbits.TMR1ON=1; //start back timer1		
+LED1_TOGGLE		
+	
 }// Timer0_int() END ///////////////////////////////////////////////////////////
 
 
@@ -122,11 +125,6 @@ void Timer1_int(void) //##/////////////////////////////////////////////////////
 		    Timer1s=1;
 	    }
 //	}
-  /*  if(PIR1bits.ADIF)                    // ADC INT
-    {
-        PIR1bits.ADIF = 0;               //clear interrupt flag
-        ADC_Data();
-    }*/
 
 }// Timer1_int() END ///////////////////////////////////////////////////////////
 

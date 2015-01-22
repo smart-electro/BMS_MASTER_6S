@@ -53,7 +53,8 @@ void checkForCan(){
 			buffer[3] = CAN_Identifier & 0xFF;
 	 		if ((buffer[0] == 0x18) && (buffer[2] == bms_id)&& (buffer[3]==0x00)) 
 	 		{
-					EepromWrite(EEPROM_MBS_ID, CAN_Data[3]);	    	
+					EepromWrite(EEPROM_MBS_ID, CAN_Data[3]);
+	    			EepromWrite(EEPROM_BAUDRATE, CAN_Data[2]);
 	     	    	Reset();
 			}
 	}

@@ -17,6 +17,30 @@ void NaslednjiPort();
 unsigned char crc_ibutton_update(unsigned char crc8,unsigned char datain);
 
 #define CELL_BALANCING 0x4f  // 0 character
+#define CELL_CUTOFF_VOLTAGE 50  // 250-200
+#define CELL_EMPTY_VOLTAGE 100  // 300-200
+#define CELL_FULL_VOLTAGE 220  // 420-200
+#define CELL_FULLOFFSET_VOLTAGE 210  // 410-200
+#define CELL_OVERVOLTAGE_VOLTAGE 230  // 430-200
+
+#define STATUS_B1_ALL_FULL 0
+#define STATUS_B1_ONE_FULL 1
+#define STATUS_B1_EMPTY 2
+#define STATUS_B1_CUTOFF 3
+#define STATUS_B1_OVERVOLTAGE 4
+#define STATUS_B0_ALL_ROK 6
+
+//cell status //0-normal , 1-full, 2-empty, 3-cut-off 4-overvoltage 5-NoRead
+#define CELL_NORMAL 0
+#define CELL_FULL 1
+#define CELL_EMPTY 2
+#define CELL_CUTOFF 3
+#define CELL_OVERVOLTAGE 4
+#define CELL_NOROK 5
+
+
+
+
 
 void readBmsSlaves()
 {
@@ -30,20 +54,24 @@ void readBmsSlaves()
 		//receive timeout
 		if(SlaveReceiveTimeout >= 2) {
 			SlaveReceiveTimeout=0;
-			//slaves can have +-10% baudrate. If timeout start sweping the baudrate (timer0)
+			//slaves can have +-10% baudrate. If timeout-> start sweping the baudrate (timer0)
 			// 8Mhz/4 = 2M samples/s
 			//			    1110*3 -> WriteTimer0(65535-600);64935
 			//			    1130*3 -> WriteTimer0(65535-589);64946
-			//default		1150*3 -> WriteTimer0(65535-580);64955
+			//				1150*3 -> WriteTimer0(65535-580);64955
 			//			    1170*3 -> WriteTimer0(65535-569);64966
 			//			    1190*3 -> WriteTimer0(65535-560);64975
+			//default		1200*3 -> WriteTimer0(65535-555);64980
 			//			    1250*3 -> WriteTimer0(65535-533);65002
+
 			SlaveReceiveMasterTimeout++;
 			Timer0Value+=5;
  			if(Timer0Value >= 65100) Timer0Value=64935;
  			if(Timer0Value <= 64935) Timer0Value=64935;
 
+			//if no readout after sweep -> we go for next cell
 			if(SlaveReceiveMasterTimeout >= 35) {	
+				BatteryCells[BatNo].status=5;
 				BatteryCells[BatNo].Voltage=0xff; //clear values
 				BatteryCells[BatNo].PWM=0xff;
 				clear_bit(BmsStatus0, BatNo);     //clear status bit
@@ -59,7 +87,7 @@ void NaslednjiPort()
 	//unsigned long LocalcellStatuses=cellStatuses[0];
 	SlaveReceiveTimeout=0;
 	SlaveReceiveMasterTimeout=0;
-	
+	Timer0Value=65020;
 
     BatNo++;                      // in gremo na novo baterijo
 	if (BatNo >= 6){              // If we read thru all ports
@@ -72,20 +100,24 @@ void NaslednjiPort()
 		BmsStatus1=0;  
 		//loop through all cells
 		for(char i=0; i<=5; i++){ 
-			if(BatteryCells[i].PWM != 0 && BatteryCells[i].PWM != 0xFF){ // todo look for status
+			if(BatteryCells[i].status == CELL_FULL){
 				countFull++;
-				set_bit(BmsStatus1, 1); //one full flag 
+				set_bit(BmsStatus1, STATUS_B1_ONE_FULL); //one full flag 
  			}
-			if(BatteryCells[i].Voltage != 0xFF) countROK++;  
+			if(BatteryCells[BatNo].status != CELL_NOROK) countROK++;  
+			if(BatteryCells[i].status==CELL_OVERVOLTAGE){
+		 		set_bit(BmsStatus1, STATUS_B1_OVERVOLTAGE ); //OVERVOLTAGE  
+ 			}
+			if(BatteryCells[i].status==CELL_CUTOFF){
+		 		set_bit(BmsStatus1, STATUS_B1_CUTOFF ); //OVERVOLTAGE  
+ 			}
+			if(BatteryCells[i].status==CELL_EMPTY){
+		 		set_bit(BmsStatus1, STATUS_B1_EMPTY ); //OVERVOLTAGE  
+ 			}
 		}
-		if(countFull == 6 ) set_bit(BmsStatus1, 0); //all full flag
-		
-		if(countROK  == 6 ) set_bit(BmsStatus0, 6); 
-		else clear_bit(BmsStatus0, 6);
-		//todo low & off
-
-		
-
+		if(countFull == 6 ) set_bit(BmsStatus1, STATUS_B1_ALL_FULL); //all full flag
+		if(countROK  == 6 ) set_bit(BmsStatus0, STATUS_B0_ALL_ROK); 
+		else clear_bit(BmsStatus0, STATUS_B0_ALL_ROK);
 	}	
     rx_cnt = 0;
 	softuart_flush_input_buffer();
@@ -131,7 +163,7 @@ void processReceivedByte(char Rx_Char){
 			    	crc8 = crc_ibutton_update(crc8, BatChar[i]);
 			  	}
 				if(crc8==BatChar[6]){
-
+					
 					/*	
 					softuart_putchar('>');
 					softuart_putchar((ADC_result & 0xFF00L) >> 8);   // Apply the lower middle byte of the data 
@@ -157,9 +189,35 @@ void processReceivedByte(char Rx_Char){
 					
 					//pwm
 					BatteryCells[BatNo].PWM=BatChar[5];
+					
+					//read OK
 					set_bit(BmsStatus0, BatNo);
-	
-					//Cell max voltage checking
+						
+					//status //0-normal , 1-full, 2-empty, 3-cut-off 4-overvoltage 5-NoRead
+					//if status was set to FULL and voltage has droped below OFFSET the cell is not full anymore
+					if(BatteryCells[BatNo].Voltage<= CELL_FULLOFFSET_VOLTAGE){
+					 	BatteryCells[BatNo].status=CELL_NORMAL;
+					}
+					//if balancing the cell is full
+					if(BatteryCells[BatNo].PWM > 0){ 
+						BatteryCells[BatNo].status=CELL_FULL; 
+					}
+					//if cell is empty
+					if(BatteryCells[BatNo].Voltage<= CELL_EMPTY_VOLTAGE){
+					 	BatteryCells[BatNo].status=CELL_EMPTY;
+					}
+					//if cell is at absolute minimum
+					if(BatteryCells[BatNo].Voltage<= CELL_CUTOFF_VOLTAGE){
+					 	BatteryCells[BatNo].status=CELL_CUTOFF;
+					}
+					//if cell is at absolute maximum
+					if(BatteryCells[BatNo].Voltage>= CELL_OVERVOLTAGE_VOLTAGE){
+					 	BatteryCells[BatNo].status=CELL_OVERVOLTAGE;
+					}
+
+
+
+					//Cell max voltage history
 					if((BatteryCells[BatNo].Voltage > BatteryCells[BatNo].MaxVoltage) || (BatteryCells[BatNo].MaxVoltage==0xFF)){
 						BatteryCells[BatNo].MaxVoltage=BatteryCells[BatNo].Voltage;
 						EepromWrite(EEPROM_MAX_VOLTAGE+BatNo, BatteryCells[BatNo].MaxVoltage);

@@ -24,5 +24,6 @@ struct BatteryCell{
 	unsigned char MaxVoltage;
 	unsigned char MinVoltage;
 	unsigned char MaxBalancing;
+	unsigned char status;  //0-normal , 1-full, 2-low, 3-empty, 4-cuttoff, 5-NoRead
 };
 struct BatteryCell BatteryCells[NO_CELLS];

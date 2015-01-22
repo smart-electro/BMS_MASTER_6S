@@ -165,8 +165,8 @@ volatile static unsigned short internal_tx_buffer; /* ! mt: was type uchar - thi
 //#define get_rx_pin_status()    ( SOFTUART_RXPIN  &   ( 1 << SOFTUART_RXBIT ) )
 #define set_tx_pin_high()      PORTAbits.RA0=1;
 #define set_tx_pin_low()       PORTAbits.RA0
-#define get_rx_pin_status()    PORTCbits.RC0;
-/*
+//#define get_rx_pin_status()    PORTCbits.RC0;
+
 unsigned char get_rx_pin_status(){
     
 	switch(BatNo){
@@ -186,7 +186,7 @@ unsigned char get_rx_pin_status(){
 			return 0;			
 	}	
 }
-*/
+
 
 //#define set_tx_pin_high()      ( PORTA |=  ( 1 << RA0 ) )
 //#define set_tx_pin_low()       ( PORTA &= ~( 1 << RA0 ) )

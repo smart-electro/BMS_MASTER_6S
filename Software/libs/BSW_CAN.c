@@ -768,22 +768,25 @@ void CanConfig(){
     // CANInitialize(SJW, BRP, PHSEG1, PHSEG2, PROPSEG, config);
     // 8MHz Fosc 250Kb/s
     // 8MHz -> 2MHz @ 250Khz = 8Tq (1+2+3+2)
-    //CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //256kb at 8Mhz crystal
+    CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //256kb at 8Mhz crystal
 	
-	switch(BaudrateSettings){
+	/*switch(BaudrateSettings){
 	    case 2  :  //250kbs
-	       CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //256kb at 8Mhz crystal
-	       break; 
+	       	BRGCON1=1;
+			BRGCON2=0xbc;
+			BRGCON3=1;
+	       	break; 
 	    case 3  :  //500kbs
-	       CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //500kb at 8Mhz crystal
-	       break; 
+	       	BRGCON1=0x0;
+			BRGCON2=0xbc;
+			BRGCON3=1;	       
+			break; 
 	    default :
-	       CANInitialize(1 ,0x02 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); //256kb at 8Mhz crystal
-	
+	       	BRGCON1=1;
+			BRGCON2=0xbc;
+			BRGCON3=1;	
 	}    
-//	BRGCON1=1;
-//	BRGCON2=0xbc;
-//	BRGCON3=1;
+*/
 
 	// CANInitialize(1 ,0x06 ,2 ,3 ,2 , CAN_CONFIG_VALID_XTD_MSG); USB-CAN
     //CANSetOperationMode(CAN_OP_MODE_CONFIG);

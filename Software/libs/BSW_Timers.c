@@ -66,6 +66,6 @@ void RTOS_TimerConfig(){
 	INTCONbits.GIEH = 1;			// Enable high priority interrupts
 	INTCONbits.GIEL = 1; 			// Enable low priority interrupts
 
-
+	
 
 }
