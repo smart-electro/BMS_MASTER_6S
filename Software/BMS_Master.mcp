@@ -116,7 +116,7 @@ file_007=libs\BSW_ReadADC.c
 file_008=libs\APP_ReadTemperature.c
 file_009=libs\BSW_GPIO.c
 file_010=libs\APP_Settings.c
-file_011=Z:\dokumenti\Smart-electro.net\GitHub\BMS_MASTER_6S\Software\libs\BSW_EEPROM.c
+file_011=libs\BSW_EEPROM.c
 file_012=libs\main.c
 file_013=libs\RTOS.h
 file_014=libs\main.h
@@ -130,13 +130,13 @@ file_021=libs\BSW_GPIO.h
 file_022=libs\BSW_ReadADC.h
 file_023=libs\BSW_SoftUART.h
 file_024=libs\BSW_Timers.h
-file_025=Z:\dokumenti\Smart-electro.net\GitHub\BMS_MASTER_6S\Software\libs\BSW_EEPROM.h
+file_025=libs\BSW_EEPROM.h
 [SUITE_INFO]
 suite_guid={5B7D72DD-9861-47BD-9F60-2BE967BF8416}
 suite_state=
 [TOOL_SETTINGS]
 TS{DD2213A8-6310-47B1-8376-9430CDFC013F}=
-TS{BFD27FBA-4A02-4C0E-A5E5-B812F3E7707C}=/m"$(BINDIR_)$(TARGETBASE).map" /o"$(BINDIR_)$(TARGETBASE).cof"
+TS{BFD27FBA-4A02-4C0E-A5E5-B812F3E7707C}=/o"$(BINDIR_)$(TARGETBASE).cof" /M"$(BINDIR_)$(TARGETBASE).map" /W
 TS{C2AF05E7-1416-4625-923D-E114DB6E2B96}=-Ou- -Ot- -Ob- -Op- -Or- -Od- -Opa-
 TS{ADE93A55-C7C7-4D4D-A4BA-59305F7D0391}=
 [INSTRUMENTED_TRACE]

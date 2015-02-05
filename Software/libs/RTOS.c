@@ -8,6 +8,7 @@
 #include "APP_SendBmsData.h"
 #include "APP_ReadBmsSlave.h"
 #include "APP_Settings.h"
+#include "APP_AuxFunctions.h"
 #include "RTOS.h"
 #include <p18cxxx.h>
 #include <timers.h>
@@ -19,14 +20,15 @@ extern unsigned char ADC_ChanelCnt;
 extern unsigned char ADC_SampleCnt;
 extern unsigned char ADC_OK;
 
-unsigned int timerTick;
-unsigned int timer100msTick;
-
+volatile unsigned int timerTick;
+volatile unsigned int timer100msTick;
+#define STATUS_B0_ALL_ROK 6
 /*-##-----------Prototypes----------------------------------------------------*/
 void Interrupt_low (void);
 void Interrupt_high (void);
 void Timer0_int (void);
 void Timer1_int (void);
+
 
 //real time operating system - scheduler
 void RTOS(){
@@ -34,8 +36,6 @@ void RTOS(){
 	//1s task
 	if(Timer1s){
 		Timer1s=0;
-		
-		
 		
 		sendCellMinVoltage_send=1;	
 		sendCellMaxBalancing_send=1;
@@ -49,19 +49,33 @@ void RTOS(){
             SelChanConvADC(ADC_Chanels[ADC_ChanelCnt]);
             ADC_OK = 0;
 		}
+		//if readout of all cells is ok than we toggle the LED1_TOGGLE	
+		LED2_TOGGLE //lifebeat
+		if(test_bit(BmsStatus0, STATUS_B0_ALL_ROK)){ 		    
+			if(LED2_STATUS==1) LED1_OFF
+			else LED1_ON
+		}else{
+			LED1_OFF
+		}
+		
 		
 	}
 	if(Timer100ms){
 		Timer100ms=0;
-		ADC_Data();
 		//100ms task read slave
 		sendBmsStatus_send=1;
 		sendCellVoltages_send=1;
 		sendCellBalancingStatus_send=1;
 
-
 		SlaveReceiveTimeout++;
-		
+	
+    	if(!test_bit(BmsStatus0, STATUS_B0_ALL_ROK)){
+ 		    LED1_TOGGLE //fast blinking
+		}
+
+
+
+
 	}
 
  	sendCellVoltages();
@@ -81,11 +95,8 @@ void RTOS(){
 /*********************************************************/
 
 // Timer 0 Interrupt Service Routine (Timer 0 ISR)
-#pragma interrupt Timer0_int
 void Timer0_int(void) //##/////////////////////////////////////////////////////
 {
-	//T1CONbits.TMR1ON=0;  //stop timer1
-
 	INTCONbits.TMR0IF=0;	// Clear Timer 0 overflow interrupt flag
 	//WriteTimer0(65000);
 	
@@ -93,51 +104,55 @@ void Timer0_int(void) //##/////////////////////////////////////////////////////
 	
 	interruptCAllback(); //SW uart
 
-	//T1CONbits.TMR1ON=1; //start back timer1		
-LED1_TOGGLE		
+	
 	
 }// Timer0_int() END ///////////////////////////////////////////////////////////
 
-
-
-
 // Timer 1 Interrupt Service Routine (Timer 1 ISR)
-#pragma interruptlow Timer1_int
 void Timer1_int(void) //##/////////////////////////////////////////////////////
 {
 
-//	if(PIR1bits.TMR1IF)                 // Timer 1 INT  
-   // {	
-		PIR1bits.TMR1IF = 0;	// Clear Timer 1 overflow interrupt flag	
-		WriteTimer1(40536);
+	PIR1bits.TMR1IF = 0;	// Clear Timer 1 overflow interrupt flag	
+	WriteTimer1(40536);
 
-		LED2_TOGGLE
-	    timerTick++;
 	
-	    if(timerTick>=1){ //100ms 
-		    timerTick=0;
-    		timer100msTick++;
-	    	Timer100ms=1;
+    timerTick++;
 	
-	    }
-	    if(timer100msTick>=10){
-		    timer100msTick=0;
-		    Timer1s=1;
-	    }
-//	}
+    if(timerTick>=1){ //100ms 
+	    timerTick=0;
+   		timer100msTick++;
+    	Timer100ms=1;
+    }
 
-}// Timer1_int() END ///////////////////////////////////////////////////////////
+    if(timer100msTick>=10){
+	    timer100msTick=0;
+	    Timer1s=1;
+    }
+}
+// Timer1_int() END ///////////////////////////////////////////////////////////
 
-// === Interrupt Vector Table START ===
-#pragma code int_high=0x000008
-void Interrupt_high(void) //##/////////////////////////////////////////////////
+void interrupt myHiIsr(void)
 {
-	_asm GOTO Timer0_int _endasm
-}// Interrupt_high() END ///////////////////////////////////////////////////////
+    if(INTCONbits.TMR0IF)                   //check for TMR0 overflow interrupt flag
+    {
+        INTCONbits.TMR0IF = 0;              //clear interrupt flag
+    	Timer0_int();
+    }
+}
+// Interrupt_high() END ///////////////////////////////////////////////////////
 
-#pragma code int_low=0x000018
-void Interrupt_low(void) //##//////////////////////////////////////////////////
+void interrupt low_priority myLoIsr(void)
 {
-	_asm GOTO Timer1_int _endasm
-}// Interrupt_low() END ////////////////////////////////////////////////////////
+    if(PIR1bits.TMR1IF)                     //check for TMR1 overflow interrupt flag
+    {
+        PIR1bits.TMR1IF = 0;                //clear interrupt flag
+        Timer1_int();
+    }
+	if(PIR1bits.ADIF)                       //chek for ADC INT interrupt flag
+    {
+        PIR1bits.ADIF = 0;                  //clear interrupt flag
+        ADC_Data();
+    }
+}
+// Interrupt_low() END ////////////////////////////////////////////////////////
 

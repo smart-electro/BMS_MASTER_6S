@@ -43,12 +43,17 @@ void main(void)
 	ADC_Init();
 	softuart_init();
 
-	//disable comparator!!
+//    INTCONbits.GIE = 1; //enable global interrupts
+    RCONbits.IPEN = 1;   //set interrupt priority
+    INTCONbits.GIEH = 1; //enable global HIGH interrupts
+    INTCONbits.GIEL = 1; //enable global LOW interrupts
+
+//disable comparator!!
 	CMCONbits.CM0=1;
 	CMCONbits.CM1=1;
 	CMCONbits.CM2=1;
 
-	
+	LED2_TOGGLE
 	//cycicaly calling RTOS (Real time Operating System)	
 	while(1)
     { 

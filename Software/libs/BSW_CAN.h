@@ -76,13 +76,13 @@
     #define TXB2CON_TXREQ       TXB2CONbits.TXREQ
 #endif
 
-#if defined(HITECH_C18)
-    #define COMSTAT_TXB0        TXB0
-    #define COMSTAT_TXBP        TXBP
-    #define COMSTAT_RXBP        RXBP
-    #define CANCON_ABAT         ABAT
-    #define RXB0CON_RXFUL       RXB0RXFUL
-    #define TXB0CON_TXREQ       TXB0REQ
+#if defined(HITECH_C18) //and xc8
+    #define COMSTAT_TXB0        COMSTATbits.TXB0
+    #define COMSTAT_TXBP        COMSTATbits.TXBP
+    #define COMSTAT_RXBP        COMSTATbits.RXBP
+    #define CANCON_ABAT         CANCONbits.ABAT
+    #define RXB0CON_RXFUL       RXB0CONbits.RXFUL
+    #define TXB0CON_TXREQ       TXB0CONbits.TXREQ
 
     /*
      * Following are special defs to overcome compiler problem
@@ -90,7 +90,12 @@
      * Set following line to "#if 0" after verifiying correct
      * compiler behavior.
      */
-#if 1
+    #define RXB1CON_RXFUL       RXB1CONbits.RXFUL
+    #define TXB1CON_TXREQ       TXB1CONbits.TXREQ
+    #define TXB2CON_TXREQ       TXB2CONbits.TXREQ
+#define TXB0CON_TXREQ       TXB0CONbits.TXREQ
+
+/*#if 1
     static struct
     {
         unsigned : 7;
@@ -121,11 +126,16 @@
         unsigned TXABT:1;
     } TXB2CONbits @ 0xf20;
     #define TXB2CON_TXREQ       TXB2CONbits.TXREQ
+
+extern volatile TXB2CONbits_t TXB2CONbits @ 0xF20;
+
 #else
     #define RXB1CON_RXFUL       RXB1RXFUL
     #define TXB1CON_TXREQ       TXB1REQ
     #define TXB2CON_TXREQ       TXB2REQ
 #endif
+*/
+
 
 
 

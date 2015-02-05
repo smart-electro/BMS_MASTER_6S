@@ -85,7 +85,7 @@
     #define COMSTAT_RX0OVFL     RXB0OVFL
     #define PIR3_RXB1IF         RXB1IF
     #define COMSTAT_RX1OVFL     RXB1OVFL
-    #define RXB0DLC_RTR         RXB0RXRTR
+    #define RXB0DLC_RTR         (RXB0DLC & 0x40)
     #define RXB0SIDL_EXID       RXB0EXID
     #define PIR3_IRXIF          IRXIF
 #endif

@@ -14,35 +14,34 @@ void ADC_Init(void)
     TRISAbits.TRISA1= 0x1;
     TRISAbits.TRISA2= 0x1;
     TRISAbits.TRISA3= 0x1;
+    IPR1bits.ADIP = 0;
     ADC_ChanelCnt = 0;
     ADC_SampleCnt = 0;
-    OpenADC(ADC_FOSC_32 & ADC_RIGHT_JUST & ADC_8_TAD, ADC_CH0 & ADC_INT_OFF & ADC_REF_VDD_VSS, ADC_4ANA);
+    OpenADC(ADC_FOSC_32 & ADC_RIGHT_JUST & ADC_8_TAD, ADC_CH0 & ADC_INT_ON & ADC_REF_VDD_VSS, ADC_4ANA);
     ConvertADC();    
 }
 
 //read data from ADC
 void ADC_Data(void)
 {
-    if(!BusyADC()){
-		unsigned char tp_cnt =0;
-	    ADC_sample[ADC_ChanelCnt] +=  ReadADC();
-	    ADC_ChanelCnt++;
-	    if (ADC_ChanelCnt >= ADC_ChanalNo) //16x sampeling
-	    {
-	        ADC_ChanelCnt = 0;
-	        ADC_SampleCnt++;
-	        if (ADC_SampleCnt >= ADC_SampleNo)
-	        {
-	            ADC_SampleCnt = 0;
-	            for(tp_cnt=0; tp_cnt<ADC_ChanalNo; tp_cnt++)
-	            {
-	                ADC_result[tp_cnt] = ADC_sample[tp_cnt];
-	                ADC_sample[tp_cnt] = 0;
-	            } 
-	            ADC_OK = 1;
-	        } 
-	    }
-	    if (ADC_OK == 0) SelChanConvADC(ADC_Chanels[ADC_ChanelCnt]);
-	
-	}
+	unsigned char tp_cnt =0;
+    ADC_sample[ADC_ChanelCnt] +=  ReadADC();
+    ADC_ChanelCnt++;
+    if (ADC_ChanelCnt >= ADC_ChanalNo) //16x sampeling
+    {
+        ADC_ChanelCnt = 0;
+        ADC_SampleCnt++;
+        if (ADC_SampleCnt >= ADC_SampleNo)
+        {
+            ADC_SampleCnt = 0;
+            for(tp_cnt=0; tp_cnt<ADC_ChanalNo; tp_cnt++)
+            {
+                ADC_result[tp_cnt] = ADC_sample[tp_cnt];
+                ADC_sample[tp_cnt] = 0;
+            } 
+            ADC_OK = 1;
+        } 
+    }
+    SelChanConvADC(ADC_Chanels[ADC_ChanelCnt]);
+//    if (ADC_OK == 0) SelChanConvADC(ADC_Chanels[ADC_ChanelCnt]);
 }

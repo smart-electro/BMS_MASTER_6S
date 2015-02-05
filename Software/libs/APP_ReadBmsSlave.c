@@ -71,7 +71,7 @@ void readBmsSlaves()
 
 			//if no readout after sweep -> we go for next cell
 			if(SlaveReceiveMasterTimeout >= 35) {	
-				BatteryCells[BatNo].status=5;
+				BatteryCells[BatNo].status=CELL_NOROK;
 				BatteryCells[BatNo].Voltage=0xff; //clear values
 				BatteryCells[BatNo].PWM=0xff;
 				clear_bit(BmsStatus0, BatNo);     //clear status bit
@@ -104,7 +104,9 @@ void NaslednjiPort()
 				countFull++;
 				set_bit(BmsStatus1, STATUS_B1_ONE_FULL); //one full flag 
  			}
-			if(BatteryCells[BatNo].status != CELL_NOROK) countROK++;  
+			if(BatteryCells[i].status != CELL_NOROK){
+				 countROK++;
+  			}
 			if(BatteryCells[i].status==CELL_OVERVOLTAGE){
 		 		set_bit(BmsStatus1, STATUS_B1_OVERVOLTAGE ); //OVERVOLTAGE  
  			}
